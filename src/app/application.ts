@@ -1,7 +1,7 @@
 import getKeyStroke from "../util/keys";
 import { ServerChannelWrapper } from "../util/shell-util";
 import { broadcast, registerClient, unregisterClient } from "./util/clients";
-import { TextEditor } from "./util/text-writer";
+import { ForeignCursor, TextEditor } from "./util/text-writer";
 import { User } from "./util/users";
 
 const LOREM = `This is a test of the text editor.
@@ -29,6 +29,10 @@ export class UserApplication {
   private _textWriter: TextEditor;
   private _ptySize: { x: number; y: number };
 
+  public getTextWriter() {
+    return this._textWriter;
+  }
+
   constructor(
     user: User,
     wrapper: ServerChannelWrapper,
@@ -52,17 +56,37 @@ export class UserApplication {
     this.wrapper.channel.on("data", (data: Buffer) => {
       this._textWriter.onKey(getKeyStroke(data.toJSON().data));
       this._textWriter.commitToTerminal(this.wrapper);
+      broadcast("refresh-foreign-cursors");
+      broadcast("rerender");
     });
 
     this.eventTrigger.addEventListener("disconnect", () => {
       this.wrapper.channel.close();
     });
+
+    this.eventTrigger.addEventListener("rerender", () => {
+      this._textWriter.commitToTerminal(this.wrapper);
+    });
+
+    this.eventTrigger.addEventListener("add-foreign-cursor", ((
+      evt: CustomEvent<ForeignCursor>
+    ) => {
+      const data: ForeignCursor = evt.detail;
+      this._textWriter.addForeignCursor(data);
+    }) as EventListener);
+
+    this.eventTrigger.addEventListener("refresh-foreign-cursors", ((
+      evt: CustomEvent<null>
+    ) => {
+      this._textWriter.clearForeignCursors();
+      broadcast("add-foreign-cursor", this._textWriter.ownForeignCursor);
+    }) as EventListener);
+
+    broadcast("refresh-foreign-cursors");
   }
 
-  sendEvent(event: string, ...data: any[]) {
-    this.eventTrigger.dispatchEvent(
-      new CustomEvent(event, { detail: [...data] })
-    );
+  sendEvent(event: string, data?: any) {
+    this.eventTrigger.dispatchEvent(new CustomEvent(event, { detail: data }));
   }
 
   static async create(

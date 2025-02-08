@@ -13,7 +13,7 @@ export function unregisterClient(application: UserApplication) {
   );
 }
 
-export function broadcast(event: string, data: any) {
+export function broadcast(event: string, data?: any) {
   connectedClients.forEach((application) => {
     application.sendEvent(event, data);
   });

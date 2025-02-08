@@ -4,6 +4,7 @@ import { createPtyAndShell, createSession } from "./util/connection-setup";
 import { createShellWrapper } from "./util/shell-util";
 import getKeyStroke from "./util/keys";
 import { UserApplication } from "./app/application";
+import { broadcast } from "./app/util/clients";
 
 export const listener: ServerConnectionListener = async (connection, info) => {
   let key = await getClientPublicKey(connection);
@@ -24,7 +25,7 @@ export const listener: ServerConnectionListener = async (connection, info) => {
     }
   });
 
-  await UserApplication.create(user, wrapper, {
+  let app = await UserApplication.create(user, wrapper, {
     x: pty.cols,
     y: pty.rows,
   });
