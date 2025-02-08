@@ -109,7 +109,7 @@ export class TextEditor {
 
   private getBackwardWordLength() {
     let text = this.text.slice(0, this.cursor);
-    let word = text.match(/[\p{L}\p{N}_]+|[^\p{L}\p{N}_\s]+|\s+$/u)?.[0];
+    let word = text.match(/([\p{L}\p{N}_]+|[^\p{L}\p{N}_\s]+|\s+)$/u)?.[0];
     return word?.length ?? 0;
   }
 
