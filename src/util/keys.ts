@@ -55,6 +55,12 @@ const FUNCTION_KEYS: Record<string, string> = {
   "[1~": "home", // ESC [ 1 ~ (some terminals)
   "[4~": "end", // ESC [ 4 ~ (some terminals)
   "[Z": "shift+tab", // ESC [ Z
+
+  // Add ctrl+arrow key mappings
+  "[1;5A": "up", // ESC [ 1 ; 5 A - ctrl+up
+  "[1;5B": "down", // ESC [ 1 ; 5 B - ctrl+down
+  "[1;5C": "right", // ESC [ 1 ; 5 C - ctrl+right
+  "[1;5D": "left", // ESC [ 1 ; 5 D - ctrl+left
 };
 
 // Common symbols mapping for readable output
@@ -177,6 +183,15 @@ export default function getKeyStroke(buffer: number[]): KeyStroke {
           return new KeyStroke("home", false, false, buffer);
         case 70:
           return new KeyStroke("end", false, false, buffer);
+      }
+
+      // Check for ctrl+arrow sequences
+      const sequence = String.fromCharCode(...buffer.slice(1));
+      if (sequence.startsWith("[1;5")) {
+        const fnKey = FUNCTION_KEYS[sequence];
+        if (fnKey) {
+          return new KeyStroke(fnKey, true, false, buffer);
+        }
       }
     }
   }

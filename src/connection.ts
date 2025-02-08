@@ -3,6 +3,7 @@ import getClientPublicKey, { getOrCreateUser } from "./util/authorization";
 import { createPtyAndShell, createSession } from "./util/connection-setup";
 import { createShellWrapper } from "./util/shell-util";
 import getKeyStroke from "./util/keys";
+import { UserApplication } from "./app/application";
 
 export const listener: ServerConnectionListener = async (connection, info) => {
   let key = await getClientPublicKey(connection);
@@ -17,8 +18,14 @@ export const listener: ServerConnectionListener = async (connection, info) => {
     let key = getKeyStroke(data.toJSON().data);
 
     if (key.isCtrl && key.key === "c") {
+      wrapper.clearScreen();
       shell.end();
       return;
     }
+  });
+
+  await UserApplication.create(user, wrapper, {
+    x: pty.cols,
+    y: pty.rows,
   });
 };
