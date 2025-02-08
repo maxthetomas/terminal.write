@@ -1,6 +1,15 @@
 {
   "dependencies": {
     "@types/ssh2": "^1.15.4",
+    "drizzle-orm": "^0.39.2",
     "ssh2": "^1.16.0"
+  },
+  "scripts": {
+    "dev": "nix-shell --run 'bun run --watch src/index.ts'",
+    "prod": "bun run src/index.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.2",
+    "drizzle-kit": "^0.30.4"
   }
 }
