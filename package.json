@@ -6,9 +6,11 @@
   },
   "scripts": {
     "dev": "nix-shell --run 'bun run --watch src/index.ts'",
-    "prod": "bun run src/index.ts"
+    "prod": "bun run src/index.ts",
+    "push": "bun run --bun drizzle-kit push"
   },
   "devDependencies": {
+    "@libsql/client": "^0.14.0",
     "@types/bun": "^1.2.2",
     "drizzle-kit": "^0.30.4"
   }
