@@ -4,22 +4,10 @@ import { broadcast, registerClient, unregisterClient } from "./util/clients";
 import { ForeignCursor, TextEditor } from "./util/text-writer";
 import { User } from "./util/users";
 
-const LOREM = `This is a test of the text editor.
-Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-
-Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-
-Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-
-\`\`\`json
-{
-  "name": "John",
-  "age": 30,
-  "city": "New York"
-}
-\`\`\``;
+const LOREM = Array.from(
+  { length: Math.floor(Math.random() * 24869) },
+  (a, b) => b + 1
+).join("\n");
 
 export class UserApplication {
   private eventTrigger: EventTarget;

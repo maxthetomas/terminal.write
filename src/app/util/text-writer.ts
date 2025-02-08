@@ -8,7 +8,10 @@ type Mode =
   | "replace"
   | "visual"
   | "visual-line"
-  | "delete";
+  | "delete"
+  | "scroll"
+  | "nav";
+
 type Vec2 = { x: number; y: number };
 
 export type ForeignCursor = {
@@ -26,6 +29,8 @@ export class TextEditor {
   public ownForeignCursor: ForeignCursor;
 
   private mode: Mode = "normal";
+
+  private skippedRenderingLines = 0;
 
   constructor(text: string) {
     this.text = text;
@@ -163,6 +168,19 @@ export class TextEditor {
     this.text = this.text.split("\n").toSpliced(cursorLine, 1).join("\n");
   }
 
+  private jumpToLine(line: number) {
+    if (line >= this.text.split("\n").length) return;
+
+    let indexOfLineStart = this.text
+      .split("\n")
+      .splice(0, line)
+      .join("\n").length;
+
+    this.cursor = indexOfLineStart;
+
+    this.checkScrollValid();
+  }
+
   private getCursorLineAndOffset() {
     // Calculate and adjust cursor position
     let beforeCursorLines = this.text.substring(0, this.cursor).match(/\n/g);
@@ -187,18 +205,25 @@ export class TextEditor {
   private previousLineCumulative(fromY: number) {
     return this.text
       .split("\n")
-      .splice(0, fromY)
+      .splice(this.skippedRenderingLines, fromY - this.skippedRenderingLines)
       .reduce((p, c) => p + Math.floor(c.length / this.terminalSize.x), 0);
   }
 
   private getActualCursorXY() {
-    let cursorPos = this.getCursorLineAndOffset();
+    let { x: cposX, y: cposY } = this.getCursorLineAndOffset();
 
-    let x = cursorPos.x % this.terminalSize.x;
+    let x = cposX % this.terminalSize.x;
     let y =
-      cursorPos.y +
-      Math.floor(cursorPos.x / this.terminalSize.x) +
-      this.previousLineCumulative(cursorPos.y);
+      cposY +
+      Math.floor(cposX / this.terminalSize.x) +
+      this.previousLineCumulative(cposY) -
+      this.skippedRenderingLines;
+
+    console.log(
+      this.skippedRenderingLines,
+      cposY,
+      this.previousLineCumulative(cposY)
+    );
 
     return { x, y };
   }
@@ -227,19 +252,59 @@ export class TextEditor {
     this.cursor = initCursorPosition;
   }
 
+  private _previousRenderedText = "";
+  private _previousSkippedLines = -1;
   public commitToTerminal(terminal: ServerChannelWrapper) {
     this.ownForeignCursor.position = this.cursor;
 
     terminal.hideCursor();
-    terminal.clearScreen();
     terminal.cursorPosition(0, 0);
 
-    for (let i of this.text.split("\n")) {
+    let cursorLinePosition = 0;
+
+    let clearLines =
+      false || this._previousSkippedLines != this.skippedRenderingLines;
+
+    if (clearLines) {
+      terminal.clearScreen();
+    }
+
+    let idx = 0;
+    for (let i of this.text.split("\n").splice(this.skippedRenderingLines)) {
+      if (
+        this._previousRenderedText.split("\n")[
+          idx + this.skippedRenderingLines
+        ] !== i
+      ) {
+        clearLines = true;
+      }
+
       terminal.cursorColumn(0);
+      if (clearLines) {
+        terminal.clearLine();
+      }
       terminal.write(i);
 
       let moveDown = Math.floor(i.length / this.terminalSize.x);
       terminal.cursorDown(moveDown);
+      idx++;
+
+      cursorLinePosition += moveDown + 1;
+
+      if (idx > this.terminalSize.y) {
+        break;
+      }
+    }
+
+    if (clearLines) {
+      terminal.foregroundBrightBlue();
+      for (let i = cursorLinePosition - 1; i < this.terminalSize.y - 1; i++) {
+        terminal.cursorColumn(1);
+        terminal.clearLine();
+        terminal.write("~");
+        terminal.cursorDown();
+      }
+      terminal.reset();
     }
 
     this.renderForeignCursors(terminal);
@@ -262,6 +327,9 @@ export class TextEditor {
 
     if (this.mode === "insert") terminal.setCursorStyle("bar");
     else terminal.setCursorStyle("block");
+
+    this._previousRenderedText = this.text;
+    this._previousSkippedLines = this.skippedRenderingLines;
   }
 
   //
@@ -286,7 +354,31 @@ export class TextEditor {
       case "replace":
         this.onReplaceKey(event);
         break;
+      case "scroll":
+        this.onScrollKey(event);
+        break;
+      case "nav":
+        this.onNavKey(event);
+        break;
     }
+
+    this.checkScrollValid();
+  }
+
+  private checkScrollValid() {
+    if (this.getCursorLineAndOffset().y < this.skippedRenderingLines) {
+      this.skippedRenderingLines = this.getCursorLineAndOffset().y;
+    }
+    if (
+      this.getCursorLineAndOffset().y >=
+      this.skippedRenderingLines + this.terminalSize.y - 2
+    ) {
+      this.skippedRenderingLines =
+        this.getCursorLineAndOffset().y - this.terminalSize.y + 2;
+    }
+    if (this.skippedRenderingLines < 0) this.skippedRenderingLines = 0;
+    if (this.skippedRenderingLines >= this.text.split("\n").length)
+      this.text.split("\n").length - 1;
   }
 
   private onNormalKey(event: KeyStroke) {
@@ -309,6 +401,11 @@ export class TextEditor {
       this.adjustCursorPosition(this.getForwardWordLength());
     if (event.key === "b")
       this.adjustCursorPosition(-this.getBackwardWordLength());
+
+    if (event.key === "g") this.setMode("nav");
+    if (event.key === "G") this.jumpToLine(this.text.split("\n").length - 1);
+
+    if (event.key === "z") this.setMode("scroll");
 
     this.processCommonMove(event);
   }
@@ -340,6 +437,23 @@ export class TextEditor {
       txt[this.cursor] = event.key;
       this.text = txt.join("");
     }
+    this.setMode("normal");
+  }
+
+  private onScrollKey(event: KeyStroke) {
+    if (event.key === "t")
+      this.skippedRenderingLines = this.getCursorLineAndOffset().y;
+    if (event.key === "z")
+      this.skippedRenderingLines =
+        this.getCursorLineAndOffset().y - Math.floor(this.terminalSize.y / 2);
+    if (event.key === "b")
+      this.skippedRenderingLines =
+        this.getCursorLineAndOffset().y - this.terminalSize.y + 1;
+    this.setMode("normal");
+  }
+
+  private onNavKey(event: KeyStroke) {
+    if (event.key === "g") this.jumpToLine(0);
     this.setMode("normal");
   }
 

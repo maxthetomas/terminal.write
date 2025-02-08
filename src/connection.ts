@@ -25,6 +25,8 @@ export const listener: ServerConnectionListener = async (connection, info) => {
     }
   });
 
+  wrapper.enableAlternativeScreen();
+
   let app = await UserApplication.create(user, wrapper, {
     x: pty.cols,
     y: pty.rows,
