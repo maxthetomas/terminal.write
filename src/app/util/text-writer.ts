@@ -61,6 +61,36 @@ export class TextEditor {
     if (this.cursor > this.text.length) this.cursor = this.text.length;
   }
 
+  // todo: implement remembered column
+  private rememberedCol = -1;
+  private adjustCursorLine(offset: number) {
+    if (offset == 0) return;
+    let { y: row, x: col } = this.getCursorXY();
+
+    if (row + offset < 0) return;
+    if (row + offset > this.text.split("\n").length) return;
+
+    let newX = col;
+    let nextLineText = this.text.split("\n")[row + offset];
+    if (nextLineText.length < newX) {
+      newX = nextLineText.length - 1;
+    }
+
+    if (newX < 0) newX = 0;
+    if (row + offset === 0) newX--;
+
+    console.log(row, col, offset, newX);
+    console.log(nextLineText);
+
+    this.cursor =
+      this.text
+        .split("\n")
+        .splice(0, row + offset)
+        .join("\n").length +
+      1 +
+      newX;
+  }
+
   private getForwardWordLength() {
     let text = this.text.slice(this.cursor);
     let word = text.match(/[\p{L}\p{N}_]+|[^\p{L}\p{N}_\s]+|\s+/u)?.[0];
@@ -83,7 +113,10 @@ export class TextEditor {
     }
   }
 
-  private deleteLine() {}
+  private deleteLine() {
+    let { y: cursorLine } = this.getCursorXY();
+    this.text = this.text.split("\n").toSpliced(cursorLine, 1).join("\n");
+  }
 
   //
   //
@@ -193,6 +226,7 @@ export class TextEditor {
 
   private onDeleteKey(event: KeyStroke) {
     if (event.key === "w") this.deleteWord();
+    if (event.key === "d") this.deleteLine();
     this.setMode("normal");
   }
 
@@ -216,6 +250,7 @@ export class TextEditor {
       if (event.key === "right") this.adjustCursorPosition(1);
     }
 
-    console.log(event);
+    if (event.key === "down") this.adjustCursorLine(1);
+    if (event.key === "up") this.adjustCursorLine(-1);
   }
 }
