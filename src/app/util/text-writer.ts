@@ -90,9 +90,6 @@ export class TextEditor {
     if (newX < 0) newX = 0;
     if (row + offset === 0) newX--;
 
-    console.log(row, col, offset, newX);
-    console.log(nextLineText);
-
     this.cursor =
       this.text
         .split("\n")
@@ -114,6 +111,16 @@ export class TextEditor {
     let text = this.text.slice(0, this.cursor);
     let word = text.match(/[\p{L}\p{N}_]+|[^\p{L}\p{N}_\s]+|\s+$/u)?.[0];
     return word?.length ?? 0;
+  }
+
+  private getForwardLineLength() {
+    let cur = this.getCursorXY();
+    let fullLen = this.text.split("\n")[cur.y].length;
+    return fullLen - cur.x;
+  }
+
+  private getBackwardLineLength() {
+    return this.getCursorXY().x;
   }
 
   private deleteWord() {
@@ -164,7 +171,7 @@ export class TextEditor {
     terminal.cursorPosition(this.terminalSize.y, this.terminalSize.x - 15);
 
     let { x, y } = this.getCursorXY();
-    terminal.write(`${y + 1}:${x + 1} ${this.rememberedColumn}`);
+    terminal.write(`${y + 1}:${x + 1}`);
 
     terminal.cursorPosition(y + 1, x + 1);
     terminal.showCursor();
@@ -265,5 +272,10 @@ export class TextEditor {
 
     if (event.key === "down") this.adjustCursorLine(1);
     if (event.key === "up") this.adjustCursorLine(-1);
+
+    if (event.key === "home")
+      this.adjustCursorPosition(-this.getBackwardLineLength());
+    if (event.key === "end")
+      this.adjustCursorPosition(this.getForwardLineLength());
   }
 }
