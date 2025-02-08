@@ -56,24 +56,35 @@ export class TextEditor {
   }
 
   private adjustCursorPosition(position: number) {
+    this.rememberedColumn = -1;
+
     this.cursor += position;
     if (this.cursor < 0) this.cursor = 0;
     if (this.cursor > this.text.length) this.cursor = this.text.length;
   }
 
   // todo: implement remembered column
-  private rememberedCol = -1;
+  private rememberedColumn = -1;
   private adjustCursorLine(offset: number) {
     if (offset == 0) return;
     let { y: row, x: col } = this.getCursorXY();
 
     if (row + offset < 0) return;
-    if (row + offset > this.text.split("\n").length) return;
+    if (row + offset >= this.text.split("\n").length) return;
 
     let newX = col;
     let nextLineText = this.text.split("\n")[row + offset];
     if (nextLineText.length < newX) {
+      this.rememberedColumn = newX;
       newX = nextLineText.length - 1;
+    }
+
+    if (
+      this.rememberedColumn !== -1 &&
+      nextLineText.length > this.rememberedColumn
+    ) {
+      newX = this.rememberedColumn;
+      this.rememberedColumn = -1;
     }
 
     if (newX < 0) newX = 0;
@@ -89,6 +100,8 @@ export class TextEditor {
         .join("\n").length +
       1 +
       newX;
+
+    if (this.cursor > this.text.length) this.cursor = this.text.length - 1;
   }
 
   private getForwardWordLength() {
@@ -151,7 +164,7 @@ export class TextEditor {
     terminal.cursorPosition(this.terminalSize.y, this.terminalSize.x - 15);
 
     let { x, y } = this.getCursorXY();
-    terminal.write(`${y + 1}:${x + 1}`);
+    terminal.write(`${y + 1}:${x + 1} ${this.rememberedColumn}`);
 
     terminal.cursorPosition(y + 1, x + 1);
     terminal.showCursor();
