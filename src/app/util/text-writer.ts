@@ -43,6 +43,7 @@ export class TextEditor {
 
   public addForeignCursor(foreignCursor: ForeignCursor) {
     if (foreignCursor == this.ownForeignCursor) return;
+    if (this.foreignCursors.includes(foreignCursor)) return;
     this.foreignCursors.push(foreignCursor);
   }
 
@@ -244,12 +245,15 @@ export class TextEditor {
     this.renderForeignCursors(terminal);
 
     terminal.cursorPosition(this.terminalSize.y, 0);
+    let color = this.ownForeignCursor.color;
+    terminal.setRgbColor(color.r, color.g, color.b, true);
     terminal.clearLineToEnd();
+    terminal.cursorPosition(this.terminalSize.y, 0);
     terminal.write(`[${this.mode.toUpperCase()}]`);
     terminal.cursorPosition(this.terminalSize.y, this.terminalSize.x - 15);
-
     let { x: lineX, y: lineY } = this.getCursorLineAndOffset();
     terminal.write(`${lineX + 1}:${lineY + 1}`);
+    terminal.reset();
 
     let { x, y } = this.getActualCursorXY();
     terminal.cursorPosition(y + 1, x + 1);

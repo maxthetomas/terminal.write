@@ -47,16 +47,18 @@ export class UserApplication {
     this._textWriter.setTerminalSize(this._ptySize);
     this._textWriter.commitToTerminal(this.wrapper);
 
-    this.wrapper.channel.once("close", () => {
-      unregisterClient(this);
-    });
-
     registerClient(this);
+
+    this.wrapper.channel.once("close", () => {
+      broadcast("clear-foreign-cursors");
+      unregisterClient(this);
+      broadcast("refresh-foreign-cursors");
+      broadcast("rerender");
+    });
 
     this.wrapper.channel.on("data", (data: Buffer) => {
       this._textWriter.onKey(getKeyStroke(data.toJSON().data));
       this._textWriter.commitToTerminal(this.wrapper);
-      broadcast("refresh-foreign-cursors");
       broadcast("rerender");
     });
 
@@ -68,18 +70,21 @@ export class UserApplication {
       this._textWriter.commitToTerminal(this.wrapper);
     });
 
+    this.eventTrigger.addEventListener("clear-foreign-cursors", () => {
+      this._textWriter.clearForeignCursors();
+    });
+
+    this.eventTrigger.addEventListener("refresh-foreign-cursors", ((
+      evt: CustomEvent<ForeignCursor>
+    ) => {
+      broadcast("add-foreign-cursor", this._textWriter.ownForeignCursor);
+    }) as EventListener);
+
     this.eventTrigger.addEventListener("add-foreign-cursor", ((
       evt: CustomEvent<ForeignCursor>
     ) => {
       const data: ForeignCursor = evt.detail;
       this._textWriter.addForeignCursor(data);
-    }) as EventListener);
-
-    this.eventTrigger.addEventListener("refresh-foreign-cursors", ((
-      evt: CustomEvent<null>
-    ) => {
-      this._textWriter.clearForeignCursors();
-      broadcast("add-foreign-cursor", this._textWriter.ownForeignCursor);
     }) as EventListener);
 
     broadcast("refresh-foreign-cursors");
