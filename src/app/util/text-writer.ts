@@ -240,11 +240,11 @@ export class TextEditor {
       terminal.setRgbColor(i.color.r, i.color.r, i.color.b, true);
       terminal.write(this.text[this.cursor]);
 
-      if (y !== 0) {
-        terminal.cursorUp(1);
-        terminal.cursorBack(1);
-        terminal.write(i.name);
-      }
+      // if (y !== 0) {
+      //   terminal.cursorUp(1);
+      //   terminal.cursorBack(1);
+      //   terminal.write(i.name);
+      // }
 
       terminal.reset();
     }
@@ -265,9 +265,7 @@ export class TextEditor {
     let clearLines =
       false || this._previousSkippedLines != this.skippedRenderingLines;
 
-    if (clearLines) {
-      terminal.clearScreen();
-    }
+    if (clearLines) terminal.clearScreen();
 
     let idx = 0;
     for (let i of this.text.split("\n").splice(this.skippedRenderingLines)) {
