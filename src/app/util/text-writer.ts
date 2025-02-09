@@ -42,6 +42,58 @@ export class TextEditor {
     };
   }
 
+  public getText() {
+    return this.text;
+  }
+
+  public setText(text: string) {
+    if (this.text !== text) {
+      // respond to movement
+      this.respondToTextMovement(text);
+    }
+
+    this.text = text;
+  }
+
+  public respondToTextMovement(newtext: string) {
+    // Handle empty strings
+    if (!this.text || !newtext) {
+      this.cursor = 0;
+      return;
+    }
+
+    // Find first differing character between old and new text
+    let i = 0;
+    while (
+      i < Math.min(this.text.length, newtext.length) &&
+      this.text[i] === newtext[i]
+    ) {
+      i++;
+    }
+
+    // Find last differing character working backwards
+    let oldEnd = this.text.length - 1;
+    let newEnd = newtext.length - 1;
+    while (
+      oldEnd >= i &&
+      newEnd >= i &&
+      this.text[oldEnd] === newtext[newEnd]
+    ) {
+      oldEnd--;
+      newEnd--;
+    }
+
+    // If change was before cursor, adjust cursor position by the difference in text length
+    if (i < this.cursor) {
+      const lengthDiff = newEnd - i + 1 - (oldEnd - i + 1);
+      // Ensure cursor stays within bounds
+      this.cursor = Math.max(
+        0,
+        Math.min(newtext.length, this.cursor + lengthDiff)
+      );
+    }
+  }
+
   public setTerminalSize(size: Vec2) {
     this.terminalSize = size;
   }
@@ -219,12 +271,6 @@ export class TextEditor {
       this.previousLineCumulative(cposY) -
       this.skippedRenderingLines;
 
-    console.log(
-      this.skippedRenderingLines,
-      cposY,
-      this.previousLineCumulative(cposY)
-    );
-
     return { x, y };
   }
 
@@ -238,7 +284,7 @@ export class TextEditor {
 
       terminal.cursorPosition(y + 1, x + 1);
       terminal.setRgbColor(i.color.r, i.color.r, i.color.b, true);
-      terminal.write(this.text[this.cursor]);
+      terminal.write(this.text[this.cursor] ?? "");
 
       // if (y !== 0) {
       //   terminal.cursorUp(1);

@@ -4,10 +4,7 @@ import { broadcast, registerClient, unregisterClient } from "./util/clients";
 import { ForeignCursor, TextEditor } from "./util/text-writer";
 import { User } from "./util/users";
 
-const LOREM = Array.from(
-  { length: Math.floor(Math.random() * 24869) },
-  (a, b) => b + 1
-).join("\n");
+let syncedText = "Input";
 
 export class UserApplication {
   private eventTrigger: EventTarget;
@@ -31,7 +28,7 @@ export class UserApplication {
     this.user = user;
     this._ptySize = ptySize;
 
-    this._textWriter = new TextEditor(LOREM);
+    this._textWriter = new TextEditor(syncedText);
     this._textWriter.setTerminalSize(this._ptySize);
     this._textWriter.commitToTerminal(this.wrapper);
 
@@ -44,9 +41,19 @@ export class UserApplication {
       broadcast("rerender");
     });
 
+    let prevText = "";
     this.wrapper.channel.on("data", (data: Buffer) => {
       this._textWriter.onKey(getKeyStroke(data.toJSON().data));
       this._textWriter.commitToTerminal(this.wrapper);
+
+      syncedText = this._textWriter.getText();
+      let text = this._textWriter.getText();
+
+      if (prevText !== text) {
+        broadcast("text-update", text);
+        prevText = text;
+      }
+
       broadcast("rerender");
     });
 
@@ -73,6 +80,13 @@ export class UserApplication {
     ) => {
       const data: ForeignCursor = evt.detail;
       this._textWriter.addForeignCursor(data);
+    }) as EventListener);
+
+    this.eventTrigger.addEventListener("text-update", ((
+      evt: CustomEvent<string>
+    ) => {
+      const data = evt.detail;
+      this._textWriter.setText(data);
     }) as EventListener);
 
     broadcast("refresh-foreign-cursors");
