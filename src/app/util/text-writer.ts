@@ -283,11 +283,18 @@ export class TextEditor {
     for (let i of this.foreignCursors) {
       this.cursor = i.position;
 
-      const { x, y } = this.getActualCursorXY();
+      let { x, y } = this.getActualCursorXY();
+
+      let textUnderCursor = this.text[this.cursor] ?? "";
+      if (textUnderCursor.length === 0) {
+        x -= 1;
+        textUnderCursor = this.text[this.cursor - 1] ?? "";
+      }
 
       terminal.cursorPosition(y + 1, x + 1);
       terminal.setRgbColor(i.color.r, i.color.g, i.color.b, true);
-      terminal.write(this.text[this.cursor] ?? "");
+
+      terminal.write(textUnderCursor);
 
       // if (y !== 0) {
       //   terminal.cursorUp(1);
