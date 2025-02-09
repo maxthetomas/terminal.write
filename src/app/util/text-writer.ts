@@ -31,6 +31,7 @@ export class TextEditor {
   public ownForeignCursor: ForeignCursor;
 
   private mode: Mode = "normal";
+  private copyBuffer: string = "";
 
   private skippedRenderingLines = 0;
 
@@ -213,6 +214,7 @@ export class TextEditor {
   private deleteWord() {
     let wordLength = this.getForwardWordLength();
     if (wordLength) {
+      this.copyBuffer = this.text.slice(this.cursor, this.cursor + wordLength);
       this.text = this.text
         .split("")
         .toSpliced(this.cursor, wordLength)
@@ -222,7 +224,27 @@ export class TextEditor {
 
   private deleteLine() {
     let { y: cursorLine } = this.getCursorLineAndOffset();
+    this.copyBuffer = this.text.split("\n")[cursorLine].trim() + "\n";
     this.text = this.text.split("\n").toSpliced(cursorLine, 1).join("\n");
+  }
+
+  private paste() {
+    if (!this.copyBuffer) return;
+
+    if (this.copyBuffer.includes("\n")) {
+      // For line-wise paste, insert on next line
+      let { y: cursorLine } = this.getCursorLineAndOffset();
+      let lines = this.text.split("\n");
+      lines.splice(cursorLine + 1, 0, this.copyBuffer.trimEnd());
+      this.text = lines.join("\n");
+      this.jumpToLine(cursorLine + 1);
+    } else {
+      // For character-wise paste, insert after cursor
+      let txt = this.text.split("");
+      txt.splice(this.cursor + 1, 0, ...this.copyBuffer.split(""));
+      this.text = txt.join("");
+      this.cursor += this.copyBuffer.length;
+    }
   }
 
   private jumpToLine(line: number) {
@@ -532,6 +554,7 @@ export class TextEditor {
     if (event.key === "^")
       this.adjustCursorPosition(-this.getBackwardLineLength());
 
+    if (event.key === "p") this.paste();
     if (event.key === "z") this.setMode("scroll");
 
     // Add wrapping toggle with Alt+w
