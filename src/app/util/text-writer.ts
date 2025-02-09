@@ -134,12 +134,12 @@ export class TextEditor {
     this.adjustCursorPosition(adjustCursor);
   }
 
-  private deleteBackspace() {
-    this.deleteAt(-1, -1);
-  }
-
   private deleteUnderCursor() {
-    this.deleteAt(0, 0);
+    const isLastOnLine =
+      this.text[this.cursor] === "\n" ||
+      this.cursor >= this.text.length - 1 ||
+      this.text[this.cursor + 1] === "\n";
+    this.deleteAt(0, isLastOnLine ? -1 : 0);
   }
 
   private adjustCursorPosition(position: number) {
@@ -387,6 +387,16 @@ export class TextEditor {
           this.horizontalScroll + this.terminalSize.x
         );
         terminal.write(visibleText);
+        terminal.saveCursor();
+
+        if (visibleText.length > 0 && this.horizontalScroll !== 0) {
+          terminal.cursorColumn(1);
+          terminal.foregroundBlue();
+          terminal.write("#");
+          terminal.reset();
+        }
+
+        terminal.restoreCursor();
       }
 
       let moveDown = this.isWrapped
@@ -530,8 +540,9 @@ export class TextEditor {
     }
 
     if (event.key === "escape") this.setMode("normal");
-    if (event.key === "backspace") this.deleteBackspace();
-    if (event.key === "delete") this.deleteUnderCursor();
+    if (event.key === "backspace" || (event.key === "h" && event.isCtrl))
+      this.deleteAt(-1, -1);
+    if (event.key === "delete") this.deleteAt(0, 0);
 
     if (event.key === "return") this.insert("\n");
 

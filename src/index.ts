@@ -5,6 +5,8 @@ import { listener } from "./connection.ts";
 const server = new Server(
   {
     hostKeys: [fs.readFileSync("./data/host.key")],
+    greeting: "terminal.write",
+    banner: "terminal.write",
   },
   listener
 );
