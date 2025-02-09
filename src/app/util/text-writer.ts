@@ -340,7 +340,7 @@ export class TextEditor {
         terminal.cursorPosition(position.y, position.x + 1);
         terminal.write(" ");
         terminal.write(
-          foreignCursor.name.slice(0, this.terminalSize.x - position.x)
+          foreignCursor.name.slice(0, this.terminalSize.x - position.x - 2)
         );
         terminal.write(" ");
       }
@@ -360,10 +360,9 @@ export class TextEditor {
 
     let cursorLinePosition = 0;
 
-    let clearLines =
-      false || this._previousSkippedLines != this.skippedRenderingLines;
+    let clearLines = false;
 
-    if (clearLines) terminal.clearScreen();
+    // if (clearLines) terminal.clearScreen();
 
     let idx = 0;
     for (let i of this.text.split("\n").splice(this.skippedRenderingLines)) {
@@ -553,9 +552,7 @@ export class TextEditor {
       !Object.values(FUNCTION_KEYS).includes(event.key) &&
       !Object.values(SYMBOLS).includes(event.key)
     ) {
-      for (const char of event.key.replace(/\r/g, "\n")) {
-        this.insert(char);
-      }
+      this.insert(event.key.replace(/\r/g, "\n"));
       return;
     }
 
