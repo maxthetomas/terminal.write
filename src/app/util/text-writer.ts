@@ -306,6 +306,7 @@ export class TextEditor {
   public commitToTerminal(terminal: ServerChannelWrapper) {
     this.ownForeignCursor.position = this.cursor;
 
+    terminal.channel.cork();
     terminal.hideCursor();
     terminal.cursorPosition(0, 0);
 
@@ -375,6 +376,8 @@ export class TextEditor {
 
     this._previousRenderedText = this.text;
     this._previousSkippedLines = this.skippedRenderingLines;
+
+    terminal.channel.uncork();
   }
 
   //
