@@ -104,15 +104,26 @@ export class KeyStroke {
   readonly isCtrl: boolean;
   readonly isAlt: boolean;
   readonly raw: number[];
+  readonly paste?: string;
 
-  constructor(key: string, isCtrl = false, isAlt = false, raw: number[]) {
+  constructor(
+    key: string,
+    isCtrl = false,
+    isAlt = false,
+    raw: number[],
+    paste?: string
+  ) {
     this.key = key;
     this.isCtrl = isCtrl;
     this.isAlt = isAlt;
     this.raw = raw;
+    this.paste = paste;
   }
 
   toString(): string {
+    if (this.paste) {
+      return `paste: ${this.paste}`;
+    }
     const modifiers: string[] = [];
     if (this.isCtrl) modifiers.push("ctrl");
     if (this.isAlt) modifiers.push("alt");
@@ -124,6 +135,13 @@ export class KeyStroke {
 }
 
 export default function getKeyStroke(buffer: number[]): KeyStroke {
+  // Handle paste events
+  const input = String.fromCharCode(...buffer);
+  if (input.startsWith("\u001B[200~") && input.endsWith("\u001B[201~")) {
+    const pastedText = input.slice(6, -6); // Remove the escape sequences
+    return new KeyStroke("paste", false, false, buffer, pastedText);
+  }
+
   // Handle control characters and special keys
   if (buffer.length === 1) {
     const code = buffer[0];

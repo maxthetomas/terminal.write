@@ -18,15 +18,19 @@ export const listener: ServerConnectionListener = async (connection, info) => {
   shell.on("data", (data: Buffer) => {
     let key = getKeyStroke(data.toJSON().data);
 
+    console.log(key);
+
     if (key.isCtrl && key.key === "c") {
       wrapper.clearScreen();
       wrapper.disableAlternativeScreen();
+      wrapper.disableBracketedPaste();
       shell.end();
       return;
     }
   });
 
   wrapper.enableAlternativeScreen();
+  wrapper.enableBracketedPaste();
 
   let app = await UserApplication.create(user, wrapper, {
     x: pty.cols,

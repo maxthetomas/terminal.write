@@ -125,7 +125,7 @@ export class TextEditor {
   private insert(char: string) {
     this.text =
       this.text.slice(0, this.cursor) + char + this.text.slice(this.cursor);
-    this.adjustCursorPosition(1);
+    this.adjustCursorPosition(char.length);
   }
 
   private deleteAt(position: number, adjustCursor: number) {
@@ -571,12 +571,8 @@ export class TextEditor {
     }
 
     // Handle multi-character keys not defined in keys.ts
-    if (
-      !Object.values(CTRL_CHARS).includes(event.key) &&
-      !Object.values(FUNCTION_KEYS).includes(event.key) &&
-      !Object.values(SYMBOLS).includes(event.key)
-    ) {
-      this.insert(event.key.replace(/\r/g, "\n"));
+    if (event.key === "paste") {
+      this.insert(event.paste?.replace(/\r/g, "\n")!);
       return;
     }
 
