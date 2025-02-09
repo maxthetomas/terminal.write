@@ -28,7 +28,7 @@ export class UserApplication {
     this.user = user;
     this._ptySize = ptySize;
 
-    this._textWriter = new TextEditor(syncedText);
+    this._textWriter = new TextEditor(syncedText, this.user.name);
     this._textWriter.setTerminalSize(this._ptySize);
     this._textWriter.commitToTerminal(this.wrapper);
 

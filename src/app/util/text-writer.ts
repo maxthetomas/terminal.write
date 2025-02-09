@@ -34,13 +34,13 @@ export class TextEditor {
 
   private skippedRenderingLines = 0;
 
-  constructor(text: string) {
+  constructor(text: string, name: string = "User") {
     this.text = text;
     this.cursor = 0;
     this.ownForeignCursor = {
       color: createRandomColor(),
-      name: "User",
       position: 0,
+      name,
     };
   }
 
@@ -320,11 +320,7 @@ export class TextEditor {
       // Skip if cursor is not visible
       if (!this.isPositionVisible(position)) continue;
 
-      let textUnderCursor = this.text[foreignCursor.position] ?? "";
-      if (textUnderCursor.length === 0) {
-        position.x -= 1;
-        textUnderCursor = this.text[foreignCursor.position - 1] ?? "";
-      }
+      let textUnderCursor = this.text[foreignCursor.position] ?? " ";
 
       terminal.cursorPosition(position.y + 1, position.x + 1);
       terminal.setRgbColor(
@@ -339,7 +335,9 @@ export class TextEditor {
       if (position.y !== 0) {
         terminal.cursorPosition(position.y, position.x + 1);
         terminal.write(
-          foreignCursor.name.slice(0, this.terminalSize.x - position.x)
+          " " +
+            foreignCursor.name.slice(0, this.terminalSize.x - position.x) +
+            " "
         );
       }
 
