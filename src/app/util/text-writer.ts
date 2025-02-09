@@ -313,14 +313,18 @@ export class TextEditor {
       .reduce((p, c) => p + Math.floor(c.length / this.terminalSize.x), 0);
   }
 
-  private renderForeignCursors(terminal: ServerChannelWrapper) {
+  private renderForeignCursors(
+    terminal: ServerChannelWrapper,
+    cursorPos: { x: number; y: number }
+  ) {
     for (let foreignCursor of this.foreignCursors) {
       let position = this.getActualXYFromIndex(foreignCursor.position);
 
       // Skip if cursor is not visible
       if (!this.isPositionVisible(position)) continue;
 
-      let textUnderCursor = this.text[foreignCursor.position] ?? " ";
+      let textUnderCursor = this.text[foreignCursor.position] ?? "";
+      textUnderCursor = textUnderCursor.trim();
 
       terminal.cursorPosition(position.y + 1, position.x + 1);
       terminal.setRgbColor(
@@ -330,15 +334,15 @@ export class TextEditor {
         true
       );
 
-      terminal.write(textUnderCursor);
+      terminal.write(textUnderCursor.length === 0 ? " " : textUnderCursor);
 
-      if (position.y !== 0) {
+      if (position.y !== 0 && cursorPos.y !== position.y - 1) {
         terminal.cursorPosition(position.y, position.x + 1);
+        terminal.write(" ");
         terminal.write(
-          " " +
-            foreignCursor.name.slice(0, this.terminalSize.x - position.x) +
-            " "
+          foreignCursor.name.slice(0, this.terminalSize.x - position.x)
         );
+        terminal.write(" ");
       }
 
       terminal.reset();
@@ -420,8 +424,10 @@ export class TextEditor {
     }
     terminal.reset();
 
-    this.renderForeignCursors(terminal);
+    let { x, y } = this.getActualCursorXY();
+    this.renderForeignCursors(terminal, { x, y });
 
+    // last line
     terminal.cursorPosition(this.terminalSize.y, 0);
     let color = this.ownForeignCursor.color;
     terminal.setRgbColor(color.r, color.g, color.b, true);
@@ -433,7 +439,6 @@ export class TextEditor {
     terminal.write(`${lineX + 1}:${lineY + 1}`);
     terminal.reset();
 
-    let { x, y } = this.getActualCursorXY();
     terminal.cursorPosition(y + 1, x + 1);
 
     terminal.showCursor();
@@ -522,6 +527,11 @@ export class TextEditor {
 
     if (event.key === "g") this.setMode("nav");
     if (event.key === "G") this.jumpToLine(this.text.split("\n").length - 1);
+
+    if (event.key === "$")
+      this.adjustCursorPosition(this.getForwardLineLength());
+    if (event.key === "^")
+      this.adjustCursorPosition(-this.getBackwardLineLength());
 
     if (event.key === "z") this.setMode("scroll");
 
