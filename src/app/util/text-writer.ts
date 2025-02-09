@@ -1,4 +1,4 @@
-import { KeyStroke } from "../../util/keys";
+import { CTRL_CHARS, FUNCTION_KEYS, SYMBOLS, KeyStroke } from "../../util/keys";
 import { ServerChannelWrapper } from "../../util/shell-util";
 import { Color, createRandomColor } from "./colors";
 
@@ -536,6 +536,18 @@ export class TextEditor {
   private onInsertKey(event: KeyStroke) {
     if (event.toString().length === 1) {
       this.insert(event.key);
+      return;
+    }
+
+    // Handle multi-character keys not defined in keys.ts
+    if (
+      !Object.values(CTRL_CHARS).includes(event.key) &&
+      !Object.values(FUNCTION_KEYS).includes(event.key) &&
+      !Object.values(SYMBOLS).includes(event.key)
+    ) {
+      for (const char of event.key.replace(/\r/g, "\n")) {
+        this.insert(char);
+      }
       return;
     }
 

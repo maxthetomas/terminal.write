@@ -1,5 +1,5 @@
 // Control key mapping for readable output
-const CTRL_CHARS: Record<number, string> = {
+export const CTRL_CHARS: Record<number, string> = {
   1: "ctrl+a",
   2: "ctrl+b",
   3: "ctrl+c",
@@ -32,7 +32,7 @@ const CTRL_CHARS: Record<number, string> = {
 };
 
 // Function key sequences mapping
-const FUNCTION_KEYS: Record<string, string> = {
+export const FUNCTION_KEYS: Record<string, string> = {
   // Function keys
   OP: "f1", // ESC O P
   OQ: "f2", // ESC O Q
@@ -64,7 +64,7 @@ const FUNCTION_KEYS: Record<string, string> = {
 };
 
 // Common symbols mapping for readable output
-const SYMBOLS: Record<number, string> = {
+export const SYMBOLS: Record<number, string> = {
   33: "!", // shift+1
   64: "@", // shift+2
   35: "#", // shift+3
