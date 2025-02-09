@@ -31,4 +31,9 @@ export const listener: ServerConnectionListener = async (connection, info) => {
     x: pty.cols,
     y: pty.rows,
   });
+
+  session.on("window-change", (accept, reject, info) => {
+    app.getTextWriter().setTerminalSize({ x: info.cols, y: info.rows });
+    app.sendEvent("rerender");
+  });
 };
