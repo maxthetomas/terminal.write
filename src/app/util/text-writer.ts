@@ -233,7 +233,7 @@ export class TextEditor {
 
     this.cursor = indexOfLineStart;
 
-    this.checkScrollValid();
+    this.checkCursorValid();
   }
 
   private getCursorLineAndOffset() {
@@ -343,16 +343,14 @@ export class TextEditor {
       }
     }
 
-    if (clearLines) {
-      terminal.foregroundBrightBlue();
-      for (let i = cursorLinePosition - 1; i < this.terminalSize.y - 1; i++) {
-        terminal.cursorColumn(1);
-        terminal.clearLine();
-        terminal.write("~");
-        terminal.cursorDown();
-      }
-      terminal.reset();
+    terminal.foregroundBrightBlue();
+    for (let i = cursorLinePosition - 1; i < this.terminalSize.y - 1; i++) {
+      terminal.cursorColumn(1);
+      terminal.clearLine();
+      terminal.write("~");
+      terminal.cursorDown();
     }
+    terminal.reset();
 
     this.renderForeignCursors(terminal);
 
@@ -409,10 +407,10 @@ export class TextEditor {
         break;
     }
 
-    this.checkScrollValid();
+    this.checkCursorValid();
   }
 
-  private checkScrollValid() {
+  private checkCursorValid() {
     if (this.getCursorLineAndOffset().y < this.skippedRenderingLines) {
       this.skippedRenderingLines = this.getCursorLineAndOffset().y;
     }
@@ -426,6 +424,9 @@ export class TextEditor {
     if (this.skippedRenderingLines < 0) this.skippedRenderingLines = 0;
     if (this.skippedRenderingLines >= this.text.split("\n").length)
       this.text.split("\n").length - 1;
+
+    if (this.cursor > this.text.length) this.cursor = this.text.length;
+    if (this.cursor < 0) this.cursor = 0;
   }
 
   private onNormalKey(event: KeyStroke) {
