@@ -333,11 +333,11 @@ export class TextEditor {
       terminal.write(i);
 
       let moveDown = Math.floor(i.length / this.terminalSize.x);
-      terminal.cursorDown(moveDown);
       idx++;
 
       cursorLinePosition += moveDown + 1;
 
+      terminal.cursorDown();
       if (idx > this.terminalSize.y) {
         break;
       }
