@@ -24,6 +24,8 @@ export class TextEditor {
   private text: string;
   private cursor: number;
   public terminalSize: Vec2;
+  private isWrapped: boolean = false;
+  private horizontalScroll: number = 0;
 
   private foreignCursors: ForeignCursor[] = [];
   public ownForeignCursor: ForeignCursor;
@@ -236,17 +238,62 @@ export class TextEditor {
     this.checkCursorValid();
   }
 
-  private getCursorLineAndOffset() {
+  private getCursorPositionFromIndex(index: number): Vec2 {
     // Calculate and adjust cursor position
-    let beforeCursorLines = this.text.substring(0, this.cursor).match(/\n/g);
+    let beforeCursorLines = this.text.substring(0, index).match(/\n/g);
     let cursorLine = beforeCursorLines?.length ?? 0;
     let lineStartIndex = this.text
-      .substring(0, this.cursor)
+      .substring(0, index)
       .split("")
       .lastIndexOf("\n");
-    let cursorLinePos = this.cursor - lineStartIndex - 1;
+    let cursorLinePos = index - lineStartIndex - 1;
 
     return { x: cursorLinePos, y: cursorLine };
+  }
+
+  private getActualXYFromIndex(index: number): Vec2 {
+    let { x: cposX, y: cposY } = this.getCursorPositionFromIndex(index);
+
+    if (this.isWrapped) {
+      let x = cposX % this.terminalSize.x;
+      let y =
+        cposY +
+        Math.floor(cposX / this.terminalSize.x) +
+        this.previousLineCumulative(cposY) -
+        this.skippedRenderingLines;
+      return { x, y };
+    } else {
+      // Update horizontal scroll if this is the main cursor
+      if (index === this.cursor) {
+        if (cposX - this.horizontalScroll >= this.terminalSize.x) {
+          this.horizontalScroll = cposX - this.terminalSize.x + 1;
+        } else if (cposX < this.horizontalScroll) {
+          this.horizontalScroll = cposX;
+        }
+      }
+
+      return {
+        x: cposX - this.horizontalScroll,
+        y: cposY - this.skippedRenderingLines,
+      };
+    }
+  }
+
+  private isPositionVisible(position: Vec2): boolean {
+    return (
+      position.y >= 0 &&
+      position.y < this.terminalSize.y - 1 &&
+      position.x >= 0 &&
+      position.x < this.terminalSize.x
+    );
+  }
+
+  private getCursorLineAndOffset() {
+    return this.getCursorPositionFromIndex(this.cursor);
+  }
+
+  private getActualCursorXY() {
+    return this.getActualXYFromIndex(this.cursor);
   }
 
   //
@@ -258,54 +305,46 @@ export class TextEditor {
   //
 
   private previousLineCumulative(fromY: number) {
+    if (!this.isWrapped) return 0;
+
     return this.text
       .split("\n")
       .splice(this.skippedRenderingLines, fromY - this.skippedRenderingLines)
       .reduce((p, c) => p + Math.floor(c.length / this.terminalSize.x), 0);
   }
 
-  private getActualCursorXY() {
-    let { x: cposX, y: cposY } = this.getCursorLineAndOffset();
-
-    let x = cposX % this.terminalSize.x;
-    let y =
-      cposY +
-      Math.floor(cposX / this.terminalSize.x) +
-      this.previousLineCumulative(cposY) -
-      this.skippedRenderingLines;
-
-    return { x, y };
-  }
-
   private renderForeignCursors(terminal: ServerChannelWrapper) {
-    let initCursorPosition = this.cursor;
+    for (let foreignCursor of this.foreignCursors) {
+      let position = this.getActualXYFromIndex(foreignCursor.position);
 
-    for (let i of this.foreignCursors) {
-      this.cursor = i.position;
+      // Skip if cursor is not visible
+      if (!this.isPositionVisible(position)) continue;
 
-      let { x, y } = this.getActualCursorXY();
-
-      let textUnderCursor = this.text[this.cursor] ?? "";
+      let textUnderCursor = this.text[foreignCursor.position] ?? "";
       if (textUnderCursor.length === 0) {
-        x -= 1;
-        textUnderCursor = this.text[this.cursor - 1] ?? "";
+        position.x -= 1;
+        textUnderCursor = this.text[foreignCursor.position - 1] ?? "";
       }
 
-      terminal.cursorPosition(y + 1, x + 1);
-      terminal.setRgbColor(i.color.r, i.color.g, i.color.b, true);
+      terminal.cursorPosition(position.y + 1, position.x + 1);
+      terminal.setRgbColor(
+        foreignCursor.color.r,
+        foreignCursor.color.g,
+        foreignCursor.color.b,
+        true
+      );
 
       terminal.write(textUnderCursor);
 
-      // if (y !== 0) {
-      //   terminal.cursorUp(1);
-      //   terminal.cursorBack(1);
-      //   terminal.write(i.name);
-      // }
+      if (position.y !== 0) {
+        terminal.cursorPosition(position.y, position.x + 1);
+        terminal.write(
+          foreignCursor.name.slice(0, this.terminalSize.x - position.x)
+        );
+      }
 
       terminal.reset();
     }
-
-    this.cursor = initCursorPosition;
   }
 
   private _previousRenderedText = "";
@@ -338,12 +377,25 @@ export class TextEditor {
       if (clearLines) {
         terminal.clearLine();
       }
-      terminal.write(i);
 
-      let moveDown = Math.floor(i.length / this.terminalSize.x);
+      if (this.isWrapped) {
+        terminal.write(i);
+      } else {
+        // In non-wrapped mode, show a window of text based on horizontal scroll
+        const visibleText = i.slice(
+          this.horizontalScroll,
+          this.horizontalScroll + this.terminalSize.x
+        );
+        terminal.write(visibleText);
+      }
+
+      let moveDown = this.isWrapped
+        ? Math.floor(i.length / this.terminalSize.x)
+        : 0;
       idx++;
 
       cursorLinePosition += moveDown + 1;
+      terminal.clearLineToEnd();
 
       terminal.cursorDown();
       if (idx > this.terminalSize.y) {
@@ -465,6 +517,9 @@ export class TextEditor {
 
     if (event.key === "z") this.setMode("scroll");
 
+    // Add wrapping toggle with Alt+w
+    if (event.isAlt && event.key === "w") this.toggleWrapping();
+
     this.processCommonMove(event);
   }
 
@@ -533,5 +588,12 @@ export class TextEditor {
       this.adjustCursorPosition(-this.getBackwardLineLength());
     if (event.key === "end")
       this.adjustCursorPosition(this.getForwardLineLength());
+  }
+
+  public toggleWrapping() {
+    this.isWrapped = !this.isWrapped;
+    this.horizontalScroll = 0; // Reset horizontal scroll when toggling wrap mode
+    // Force rerender
+    this._previousSkippedLines = -1;
   }
 }
