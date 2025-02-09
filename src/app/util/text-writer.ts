@@ -465,7 +465,8 @@ export class TextEditor {
     terminal.showCursor();
 
     if (this.mode === "insert") terminal.setCursorStyle("bar");
-    else terminal.setCursorStyle("block");
+    else if (this.mode === "normal") terminal.setCursorStyle("block");
+    else terminal.setCursorStyle("underline");
 
     this._previousRenderedText = this.text;
     this._previousSkippedLines = this.skippedRenderingLines;
