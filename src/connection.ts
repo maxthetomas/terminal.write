@@ -20,6 +20,7 @@ export const listener: ServerConnectionListener = async (connection, info) => {
 
     if (key.isCtrl && key.key === "c") {
       wrapper.clearScreen();
+      wrapper.disableAlternativeScreen();
       shell.end();
       return;
     }
