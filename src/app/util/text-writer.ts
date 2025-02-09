@@ -96,6 +96,9 @@ export class TextEditor {
 
   public setTerminalSize(size: Vec2) {
     this.terminalSize = size;
+
+    // Force rerender
+    this._previousSkippedLines = -1;
   }
 
   public addForeignCursor(foreignCursor: ForeignCursor) {
@@ -283,7 +286,7 @@ export class TextEditor {
       const { x, y } = this.getActualCursorXY();
 
       terminal.cursorPosition(y + 1, x + 1);
-      terminal.setRgbColor(i.color.r, i.color.r, i.color.b, true);
+      terminal.setRgbColor(i.color.r, i.color.g, i.color.b, true);
       terminal.write(this.text[this.cursor] ?? "");
 
       // if (y !== 0) {
