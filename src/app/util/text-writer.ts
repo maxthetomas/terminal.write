@@ -163,11 +163,14 @@ export class TextEditor {
     let newX = col;
     let nextLineText = this.text.split("\n")[row + offset];
     if (nextLineText.length < newX) {
-      this.rememberedColumn = newX;
+      if (this.rememberedColumn === -1) this.rememberedColumn = newX;
+
       newX = nextLineText.length - 1;
     }
 
-    if (
+    if (this.rememberedColumn > nextLineText.length) {
+      newX = nextLineText.length;
+    } else if (
       this.rememberedColumn !== -1 &&
       nextLineText.length > this.rememberedColumn
     ) {
@@ -550,8 +553,10 @@ export class TextEditor {
     if (event.key === "g") this.setMode("nav");
     if (event.key === "G") this.jumpToLine(this.text.split("\n").length - 1);
 
-    if (event.key === "$")
+    if (event.key === "$") {
       this.adjustCursorPosition(this.getForwardLineLength());
+      this.rememberedColumn = 999;
+    }
     if (event.key === "^")
       this.adjustCursorPosition(-this.getBackwardLineLength());
 

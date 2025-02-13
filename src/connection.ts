@@ -17,8 +17,7 @@ export const listener: ServerConnectionListener = async (connection, info) => {
 
   shell.on("data", (data: Buffer) => {
     let key = getKeyStroke(data.toJSON().data);
-
-    console.log(key);
+    // console.log(key);
 
     if (key.isCtrl && key.key === "c") {
       wrapper.clearScreen();
